@@ -1,0 +1,15 @@
+---
+version: '3.7'
+services:
+  aws:
+    image: cxeng.docker.artifactory.global.bamgrid.net/localstack/localstack:0.9.0
+    environment:
+      # See: https://github.com/localstack/localstack#configurations
+      - "SERVICES=dynamodb,kinesis,cloudwatch"
+      - "DEFAULT_REGION=us-east-1"
+      - "USE_SSL=true"
+    ports:
+      - "4568:4568"  # Kinesis
+      - "4569:4569"  # DynamoDB
+      - "4582:4582"  # Cloudwatch
+      - "8080:8080"  # The control UI
