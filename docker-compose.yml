@@ -8,6 +8,7 @@ services:
       - "SERVICES=dynamodb,kinesis,cloudwatch"
       - "DEFAULT_REGION=us-east-1"
       - "USE_SSL=true"
+      - "START_WEB=0"
     ports:
       - "4568:4568"  # Kinesis
       - "4569:4569"  # DynamoDB

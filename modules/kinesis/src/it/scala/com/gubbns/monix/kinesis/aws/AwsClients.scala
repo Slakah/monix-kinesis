@@ -1,19 +1,19 @@
-package com.gubbns.monix.kinesis
+package com.gubbns.monix.kinesis.aws
 
+import cats.implicits._
+import cats.effect.{IO, Resource}
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient
 import java.net.URI
 
-import cats.effect._
-import cats.implicits._
-import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
-import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder
-import software.amazon.awssdk.http.async.SdkAsyncHttpClient
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-import software.amazon.awssdk.http.{Protocol, SdkHttpConfigurationOption}
 import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
+import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
+import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
-import software.amazon.awssdk.services.kinesis.KinesisAsyncClient
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
 import software.amazon.awssdk.utils.AttributeMap
+import software.amazon.awssdk.http.{Protocol, SdkHttpConfigurationOption}
+import software.amazon.awssdk.http.async.SdkAsyncHttpClient
 
 object AwsClients {
 
@@ -32,7 +32,7 @@ object AwsClients {
       )
     } yield KinesisOps(client)
 
-  def makeDynamoDbLocal: Resource[IO, DynamoDbAsyncClient] =
+  def makeDynamoDbLocal: Resource[IO, DynamoDbOps] =
     for {
       httpClient <- makeLocalHttpClient
       client <- Resource.fromAutoCloseable(
@@ -45,7 +45,7 @@ object AwsClients {
           ).build()
         )
       )
-    } yield client
+    } yield DynamoDbOps(client)
 
   def makeCloudWatchLocal: Resource[IO, CloudWatchAsyncClient] =
     for {

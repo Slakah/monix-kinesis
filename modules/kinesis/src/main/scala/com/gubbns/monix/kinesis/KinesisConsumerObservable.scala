@@ -4,13 +4,11 @@ import scala.concurrent.blocking
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 
-import cats.effect.IO
-import cats.effect.Resource
+import cats.effect.{IO, Resource}
 import cats.implicits._
 import monix.execution.Cancelable
-import monix.reactive.Consumer
-import monix.reactive.Observable
 import monix.reactive.observers.Subscriber
+import monix.reactive.{Consumer, Observable}
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient
@@ -18,9 +16,10 @@ import software.amazon.kinesis.common._
 import software.amazon.kinesis.coordinator.{Scheduler => KScheduler}
 import software.amazon.kinesis.metrics.MetricsFactory
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory
+import software.amazon.kinesis.retrieval.KinesisClientRecord
 import software.amazon.kinesis.retrieval.polling.PollingConfig
 
-final private class KinesisConsumer private (
+final class KinesisConsumerObservable(
   f: ShardRecordProcessorFactory => KScheduler,
   terminateGracePeriod: FiniteDuration
 ) extends Observable[CommittableRecord] {
@@ -47,19 +46,18 @@ final private class KinesisConsumer private (
   }
 }
 
-object KinesisConsumer {
+object KinesisConsumerObservable {
 
-  def create(
+  def apply(
     streamName: String,
     applicationName: String,
     workerIdentifier: String,
-    tableName: String,
-    terminateGracePeriod: FiniteDuration
-  ): Observable[CommittableRecord] = {
+    tableName: String
+  ): Observable[KinesisClientRecord] = {
     val makeClients = (makeKinesisClient, makeDynamoDbClient, makeCloudWatchClient).tupled
     Observable.fromResource(makeClients).flatMap {
       case (kinesis, dynamoDb, cloudWatch) =>
-        create(
+        apply(
           streamName,
           applicationName,
           workerIdentifier,
@@ -67,8 +65,7 @@ object KinesisConsumer {
           kinesis,
           dynamoDb,
           cloudWatch,
-          metricsFactory = None,
-          terminateGracePeriod
+          metricsFactory = None
         )
     }
   }
@@ -80,7 +77,7 @@ object KinesisConsumer {
   private def makeCloudWatchClient: Resource[IO, CloudWatchAsyncClient] =
     Resource.fromAutoCloseable(IO(CloudWatchAsyncClient.create()))
 
-  def create(
+  def apply(
     streamName: String,
     applicationName: String,
     workerIdentifier: String,
@@ -88,9 +85,8 @@ object KinesisConsumer {
     kinesis: KinesisAsyncClient,
     dynamoDb: DynamoDbAsyncClient,
     cloudWatch: CloudWatchAsyncClient,
-    metricsFactory: Option[MetricsFactory],
-    terminateGracePeriod: FiniteDuration
-  ): Observable[CommittableRecord] = {
+    metricsFactory: Option[MetricsFactory]
+  ): Observable[KinesisClientRecord] = {
     def kScheduler(factory: ShardRecordProcessorFactory) = {
       val configsBuilder = new ConfigsBuilder(
         streamName,
@@ -120,13 +116,11 @@ object KinesisConsumer {
           )
       )
     }
-    create(kScheduler, terminateGracePeriod)
+    apply(kScheduler)
   }
 
-  def create(
-    f: ShardRecordProcessorFactory => KScheduler,
-    terminateGracePeriod: FiniteDuration
-  ): Observable[CommittableRecord] = new KinesisConsumer(f, terminateGracePeriod)
+  def apply(f: ShardRecordProcessorFactory => KScheduler): Observable[KinesisClientRecord] =
+    new KinesisConsumerObservableAutoCheckpoint(f)
 
   def checkpoint(
     obs: Observable[CommittableRecord],
