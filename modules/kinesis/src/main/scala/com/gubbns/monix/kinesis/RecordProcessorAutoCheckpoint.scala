@@ -11,12 +11,12 @@ import software.amazon.kinesis.lifecycle.events._
 import software.amazon.kinesis.processor.ShardRecordProcessor
 import software.amazon.kinesis.retrieval.KinesisClientRecord
 
-final private[kinesis] class RecordProcessorAutoCheckpoint(
+private[kinesis] final class RecordProcessorAutoCheckpoint(
   out: Subscriber[KinesisClientRecord],
   cancel: Cancelable
 ) extends ShardRecordProcessor {
 
-  implicit private val s: Scheduler = out.scheduler
+  private implicit val s: Scheduler = out.scheduler
 
   override def initialize(initializationInput: InitializationInput): Unit = {}
 

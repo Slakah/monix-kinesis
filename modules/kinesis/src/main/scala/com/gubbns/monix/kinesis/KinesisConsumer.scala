@@ -1,6 +1,7 @@
 package com.gubbns.monix.kinesis
 
 import scala.concurrent.duration._
+
 import cats.effect.{IO, Resource}
 import cats.implicits._
 import monix.reactive.{Consumer, Observable}

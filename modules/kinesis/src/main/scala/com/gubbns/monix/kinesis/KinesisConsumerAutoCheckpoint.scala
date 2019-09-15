@@ -10,7 +10,7 @@ import software.amazon.kinesis.coordinator.{Scheduler => KScheduler}
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory
 import software.amazon.kinesis.retrieval.KinesisClientRecord
 
-final private[kinesis] class KinesisConsumerAutoCheckpoint(
+private[kinesis] final class KinesisConsumerAutoCheckpoint(
   f: ShardRecordProcessorFactory => KScheduler
 ) extends Observable[KinesisClientRecord] {
 

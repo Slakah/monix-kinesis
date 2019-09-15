@@ -3,10 +3,10 @@ package com.gubbns.monix.kinesis
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
-import utest.{test, Tests}
+import utest._
 import cats.implicits._
-import cats.effect._
-import cats.effect.utest._
+import cats.effect.{utest => _, _} // TODO: workaround for https://github.com/djspiewak/cats-effect-testing/issues/16
+import cats.effect.utest.IOTestSuite
 import com.gubbns.monix.kinesis.instances._
 import com.gubbns.monix.kinesis.aws.{AwsClients, DynamoDbOps, KinesisOps}
 import monix.execution.Scheduler.Implicits.global
@@ -24,7 +24,7 @@ object KinesisConsumerTests extends IOTestSuite {
 
   private val applicationName = "test-application"
 
-  override val tests = Tests {
+  override val tests: Tests = Tests {
     test("manual commit") - {
       test("consume multiple records with correct prepared checkpoints") - {
         val pk2body = (1 to 10).map(i => show"pk-$i" -> show"record$i").toList
@@ -43,10 +43,14 @@ object KinesisConsumerTests extends IOTestSuite {
             records <- consumer.take(pk2body.length.toLong).toListL.to[IO]
           } yield {
             val messages = records.map(cr => decodeStringRecord(cr.record))
-            assert(messages === pk2body)
             val preparedCheckpoints = records.map(_.checkpointer.pendingCheckpoint())
             val sequenceNumbers = records.map(_.extendedSequenceNumber)
-            assert(preparedCheckpoints === sequenceNumbers)
+            val expectedNumCheckpoints = messages.size
+            assert(
+              messages === pk2body,
+              preparedCheckpoints === sequenceNumbers,
+              preparedCheckpoints.distinct.size === expectedNumCheckpoints
+            )
           }
         }
       }

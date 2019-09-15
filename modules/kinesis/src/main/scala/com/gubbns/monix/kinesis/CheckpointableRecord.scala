@@ -12,7 +12,9 @@ final case class CheckpointableRecord(
   recordProcessor: RecordProcessorSubscriber,
   checkpointer: PreparedCheckpointer
 ) {
-  def extendedSequenceNumber: ExtendedSequenceNumber = new ExtendedSequenceNumber(record.sequenceNumber(), record.subSequenceNumber())
+
+  def extendedSequenceNumber: ExtendedSequenceNumber =
+    new ExtendedSequenceNumber(record.sequenceNumber(), record.subSequenceNumber())
   def sequenceNumber: String = record.sequenceNumber()
   def subSequenceNumber: Long = record.subSequenceNumber()
   def canCheckpoint: Boolean = !recordProcessor.isShutdown

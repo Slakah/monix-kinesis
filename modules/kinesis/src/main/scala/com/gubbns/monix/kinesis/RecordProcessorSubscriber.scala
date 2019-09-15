@@ -1,9 +1,11 @@
 package com.gubbns.monix.kinesis
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
+
 import monix.execution.{Ack, Cancelable, Scheduler}
 import monix.reactive.Observer
 import monix.reactive.observers.Subscriber
@@ -11,15 +13,13 @@ import software.amazon.kinesis.lifecycle.events._
 import software.amazon.kinesis.processor.ShardRecordProcessor
 import software.amazon.kinesis.retrieval.KinesisClientRecord
 
-import scala.collection.mutable.ArrayBuffer
-
-final private[kinesis] class RecordProcessorSubscriber(
+private[kinesis] final class RecordProcessorSubscriber(
   out: Subscriber[CheckpointableRecord],
   terminateGracePeriod: FiniteDuration,
   cancel: Cancelable
 ) extends ShardRecordProcessor {
 
-  implicit private val s: Scheduler = out.scheduler
+  private implicit val s: Scheduler = out.scheduler
 
   // scalafix:off DisableSyntax.var
   private var shardId: String = _
@@ -52,7 +52,8 @@ final private[kinesis] class RecordProcessorSubscriber(
   }
 
   private def prepareCheckpointableRecord(record: KinesisClientRecord, processRecordsInput: ProcessRecordsInput) = {
-    val preparedCheckpointer = processRecordsInput.checkpointer().prepareCheckpoint(record.sequenceNumber(), record.subSequenceNumber())
+    val preparedCheckpointer =
+      processRecordsInput.checkpointer().prepareCheckpoint(record.sequenceNumber(), record.subSequenceNumber())
     CheckpointableRecord(
       shardId = shardId,
       millisBehindLatest = processRecordsInput.millisBehindLatest(),
