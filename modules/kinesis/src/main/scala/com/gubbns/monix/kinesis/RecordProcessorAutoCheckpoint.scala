@@ -11,7 +11,7 @@ import software.amazon.kinesis.lifecycle.events._
 import software.amazon.kinesis.processor.ShardRecordProcessor
 import software.amazon.kinesis.retrieval.KinesisClientRecord
 
-final private[kinesis] class ShardRecordProcessorAutoCheckpoint(
+final private[kinesis] class RecordProcessorAutoCheckpoint(
   out: Subscriber[KinesisClientRecord],
   cancel: Cancelable
 ) extends ShardRecordProcessor {
@@ -23,13 +23,14 @@ final private[kinesis] class ShardRecordProcessorAutoCheckpoint(
   override def processRecords(processRecordsInput: ProcessRecordsInput): Unit = {
     val records = processRecordsInput.records().asScala
     try {
-      processRecordsInput.checkpointer().prepareCheckpoint()
+      // TODO: settings for individual checkpointing of records
+      val preparedCheckpointer = processRecordsInput.checkpointer().prepareCheckpoint()
       val ackFuture = Observer.feed(out, records)
       ackFuture.syncOnComplete {
         case Success(Ack.Continue) =>
-          processRecordsInput.checkpointer().checkpoint()
+          preparedCheckpointer.checkpoint()
         case Success(Ack.Stop) =>
-          processRecordsInput.checkpointer().checkpoint()
+          preparedCheckpointer.checkpoint()
           cancel.cancel()
         case Failure(ex) =>
           s.reportFailure(ex)

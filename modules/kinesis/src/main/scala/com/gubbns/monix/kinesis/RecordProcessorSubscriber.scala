@@ -4,17 +4,17 @@ import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
-
 import monix.execution.{Ack, Cancelable, Scheduler}
 import monix.reactive.Observer
 import monix.reactive.observers.Subscriber
 import software.amazon.kinesis.lifecycle.events._
 import software.amazon.kinesis.processor.ShardRecordProcessor
 import software.amazon.kinesis.retrieval.KinesisClientRecord
-import software.amazon.kinesis.retrieval.kpl.ExtendedSequenceNumber
 
-final private[kinesis] class ShardRecordProcessorSubscriber(
-  out: Subscriber[CommittableRecord],
+import scala.collection.mutable.ArrayBuffer
+
+final private[kinesis] class RecordProcessorSubscriber(
+  out: Subscriber[CheckpointableRecord],
   terminateGracePeriod: FiniteDuration,
   cancel: Cancelable
 ) extends ShardRecordProcessor {
@@ -30,9 +30,13 @@ final private[kinesis] class ShardRecordProcessorSubscriber(
     shardId = initializationInput.shardId()
 
   override def processRecords(processRecordsInput: ProcessRecordsInput): Unit = {
-    val commitableRecords = processRecordsInput.records().asScala.map(recordToCommittableRecord(processRecordsInput, _))
+    val checkpointableRecords = ArrayBuffer[CheckpointableRecord]()
+    processRecordsInput.records().asScala.foreach { record =>
+      checkpointableRecords += prepareCheckpointableRecord(record, processRecordsInput)
+    }
+
     try {
-      val ackFuture = Observer.feed(out, commitableRecords)
+      val ackFuture = Observer.feed(out, checkpointableRecords)
       ackFuture.syncOnComplete {
         case Success(Ack.Continue) => ()
         case Success(Ack.Stop) => cancel.cancel()
@@ -47,19 +51,16 @@ final private[kinesis] class ShardRecordProcessorSubscriber(
     }
   }
 
-  private def recordToCommittableRecord(
-    processRecordsInput: ProcessRecordsInput,
-    record: KinesisClientRecord
-  ): CommittableRecord =
-    CommittableRecord(
+  private def prepareCheckpointableRecord(record: KinesisClientRecord, processRecordsInput: ProcessRecordsInput) = {
+    val preparedCheckpointer = processRecordsInput.checkpointer().prepareCheckpoint(record.sequenceNumber(), record.subSequenceNumber())
+    CheckpointableRecord(
       shardId = shardId,
-      recordProcessorStartingSequenceNumber =
-        new ExtendedSequenceNumber(record.sequenceNumber(), record.subSequenceNumber()),
       millisBehindLatest = processRecordsInput.millisBehindLatest(),
       record = record,
       recordProcessor = this,
-      checkpointer = processRecordsInput.checkpointer()
+      checkpointer = preparedCheckpointer
     )
+  }
 
   override def leaseLost(leaseLostInput: LeaseLostInput): Unit = {}
 
