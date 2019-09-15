@@ -22,6 +22,9 @@ final class KinesisOps private (val client: KinesisAsyncClient) extends AnyVal {
   def putRecord(reqB: PutRecordRequest.Builder => PutRecordRequest.Builder): IO[PutRecordResponse] =
     runReq(client.putRecord(_: PutRecordRequest), reqB(PutRecordRequest.builder()))
 
+  def putRecords(reqB: PutRecordsRequest.Builder => PutRecordsRequest.Builder): IO[PutRecordsResponse] =
+    runReq(client.putRecords(_: PutRecordsRequest), reqB(PutRecordsRequest.builder()))
+
   private def runReq[Req <: ToCopyableBuilder[Builder, Req], Builder <: CopyableBuilder[Builder, Req], Resp](
     reqF: Req => CompletableFuture[Resp],
     req: Builder
