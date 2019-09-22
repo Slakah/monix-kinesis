@@ -104,7 +104,7 @@ lazy val kinesis = (project in file("modules/kinesis"))
     doctestTestFramework := DoctestTestFramework.MicroTest,
     dockerComposeUp := {
       import sys.process._
-      "docker-compose up -d".!!(streams.value.log)
+      "docker-compose up -d".!!
     },
     libraryDependencies ++= Seq(
       "io.monix" %% "monix" % monixVersion,
