@@ -9,8 +9,7 @@ general:
 
 jobs:
   build:
-    docker:
-      - image: circleci/openjdk:8-jdk-node
+    machine: true
     working_directory: ~/repo
     environment:
       JVM_OPTS: -Xmx3200m
@@ -28,7 +27,14 @@ jobs:
             - v1-dependencies-
       - run:
           name: validate
-          command: sbt validate
+          command: |
+            docker run --rm \
+              -v $HOME/.ivy2/cache:/home/circleci/.ivy2/cache \
+              -v $HOME/.sbt:/home/circleci/.sbt \
+              -v $HOME/.cache:/home/circleci/.cache \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v $(pwd):/build -w /build \
+              circleci/openjdk:8-jdk-node sbt validate
       - save_cache:
           paths:
             - ~/.ivy2/cache
