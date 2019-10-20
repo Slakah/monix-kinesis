@@ -29,18 +29,19 @@ jobs:
           name: validate
           command: |
             docker run --rm \
-              -v /home/circleci/.ivy2/cache \
-              -v /home/circleci/.sbt \
-              -v /home/circleci/.cache \
+              -u root \
+              -v $HOME/.ivy2/cache/:/root/.ivy2/cache/ \
+              -v $HOME/.sbt:/root/.sbt \
+              -v $HOME/.cache:/root/.cache \
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v $(pwd):/build -w /build \
               circleci/openjdk:8-jdk-node sbt validate
-#      - save_cache:
-#          paths:
-#            - ~/.ivy2/cache
-#            - ~/.sbt
-#            - ~/.cache
-#          key: v1-dependencies-{{ checksum "/tmp/sbt-hash.txt" }}
+      - save_cache:
+          paths:
+            - ~/.ivy2/cache
+            - ~/.sbt
+            - ~/.cache
+          key: v1-dependencies-{{ checksum "/tmp/sbt-hash.txt" }}
   publish:
     docker:
       - image: circleci/openjdk:8-jdk-node
