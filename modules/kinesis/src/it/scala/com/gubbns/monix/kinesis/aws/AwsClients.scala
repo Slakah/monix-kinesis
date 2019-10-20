@@ -17,16 +17,22 @@ import software.amazon.awssdk.http.async.SdkAsyncHttpClient
 
 object AwsClients {
 
+  private val awsHost: IO[String] = IO(sys.env.isDefinedAt("CI")).map {
+    case true => "aws"
+    case false => "localhost"
+  }
+
   def makeKinesisLocal: Resource[IO, KinesisOps] =
     for {
       httpClient <- makeLocalHttpClient
+      host <- Resource.liftF(awsHost)
       client <- Resource.fromAutoCloseable(
         IO(
           localAwsClient(
             KinesisAsyncClient
               .builder()
               .httpClient(httpClient),
-            show"https://localhost:4568"
+            show"https://$host:4568"
           ).build()
         )
       )
@@ -35,13 +41,14 @@ object AwsClients {
   def makeDynamoDbLocal: Resource[IO, DynamoDbOps] =
     for {
       httpClient <- makeLocalHttpClient
+      host <- Resource.liftF(awsHost)
       client <- Resource.fromAutoCloseable(
         IO(
           localAwsClient(
             DynamoDbAsyncClient
               .builder()
               .httpClient(httpClient),
-            show"https://localhost:4569"
+            show"https://$host:4569"
           ).build()
         )
       )
@@ -50,13 +57,14 @@ object AwsClients {
   def makeCloudWatchLocal: Resource[IO, CloudWatchAsyncClient] =
     for {
       httpClient <- makeLocalHttpClient
+      host <- Resource.liftF(awsHost)
       client <- Resource.fromAutoCloseable(
         IO(
           localAwsClient(
             CloudWatchAsyncClient
               .builder()
               .httpClient(httpClient),
-            show"https://localhost:4582"
+            show"https://$host:4582"
           ).build()
         )
       )

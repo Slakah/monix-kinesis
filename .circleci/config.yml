@@ -32,6 +32,7 @@ jobs:
             docker run --rm \
               --network build_default \
               -u root \
+              -e CI \
               -v $HOME/.ivy2/cache/:/root/.ivy2/cache/ \
               -v $HOME/.sbt:/root/.sbt \
               -v $HOME/.cache:/root/.cache \
