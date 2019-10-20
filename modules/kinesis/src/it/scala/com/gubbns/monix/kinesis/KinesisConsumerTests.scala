@@ -5,22 +5,24 @@ import java.util.UUID
 
 import utest._
 import cats.implicits._
-import cats.effect.{utest => _, _} // TODO: workaround for https://github.com/djspiewak/cats-effect-testing/issues/16
+import cats.effect.{utest => _, _}
 import cats.effect.utest.IOTestSuite
 import com.gubbns.monix.kinesis.instances._
 import com.gubbns.monix.kinesis.aws.{AwsClients, DynamoDbOps, KinesisOps}
 import monix.execution.Scheduler.Implicits.global
+import monix.reactive.Observable
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
 import software.amazon.awssdk.services.kinesis.{KinesisAsyncClient, model => kmodel}
 import software.amazon.awssdk.services.dynamodb.{DynamoDbAsyncClient, model => dynomodel}
 import software.amazon.awssdk.services.kinesis.model.PutRecordsRequestEntry
+import software.amazon.kinesis.common.{InitialPositionInStream, InitialPositionInStreamExtended}
 import software.amazon.kinesis.retrieval.KinesisClientRecord
 
 import scala.concurrent.duration._
 
 object KinesisConsumerTests extends IOTestSuite {
-  override def timeout: FiniteDuration = 60.seconds
+  override def timeout: FiniteDuration = 90.seconds
 
   private val applicationName = "test-application"
 
@@ -102,6 +104,26 @@ object KinesisConsumerTests extends IOTestSuite {
           }
         }
       }
+//      test("don't checkpoint on error") - {
+//        makeAwsClientAndResources.use { case (kinesis, dynamoDb, cloudWatch, awsResources) =>
+//          val consumer = kinesisAutoObs(kinesis.client, dynamoDb.client, cloudWatch, awsResources)
+//          for {
+//            // put and then consume a record in the stream
+//            _ <- kinesis.putRecord(
+//              _.streamName(awsResources.streamName)
+//                .partitionKey("pk-1")
+//                .data(SdkBytes.fromUtf8String("record1"))
+//            )
+//            _ <- consumer.foreachL(_ => throw new IllegalStateException("expected error"))
+//              .to[IO]
+//              .recover { case ex: IllegalStateException if ex.getMessage === "expected error" => () }
+//            records1 <- consumer.take(1).toListL.to[IO]
+//          } yield {
+//            val messages1 = records1.map(decodeStringRecord)
+//            assert(messages1 === List("pk-1" -> "record1"))
+//          }
+//        }
+//      }
     }
   }
 
@@ -151,7 +173,7 @@ object KinesisConsumerTests extends IOTestSuite {
     dynamoDb: DynamoDbAsyncClient,
     cloudWatch: CloudWatchAsyncClient,
     awsResources: AwsResources
-  ) =
+  ): Observable[KinesisClientRecord] =
     KinesisConsumer(
       awsResources.streamName,
       applicationName,
@@ -160,7 +182,8 @@ object KinesisConsumerTests extends IOTestSuite {
       kinesis,
       dynamoDb,
       cloudWatch,
-      None
+      None,
+      InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.TRIM_HORIZON)
     )
 
   private def kinesisManualObs(
@@ -168,7 +191,7 @@ object KinesisConsumerTests extends IOTestSuite {
     dynamoDb: DynamoDbAsyncClient,
     cloudWatch: CloudWatchAsyncClient,
     awsResources: AwsResources
-  ) =
+  ): Observable[CheckpointableRecord] =
     KinesisConsumer.manualCheckpoint(
       awsResources.streamName,
       applicationName,
@@ -177,7 +200,8 @@ object KinesisConsumerTests extends IOTestSuite {
       kinesis,
       dynamoDb,
       cloudWatch,
-      None
+      None,
+      InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.TRIM_HORIZON)
     )
 
   private def decodeStringRecord(record: KinesisClientRecord) =

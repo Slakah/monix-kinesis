@@ -1,4 +1,4 @@
-package com.disneystreaming.cxeng.utils
+package com.gubbns.monix.kinesis
 
 import cats.effect.IO
 import java.util.concurrent.{CompletableFuture, CompletionException}

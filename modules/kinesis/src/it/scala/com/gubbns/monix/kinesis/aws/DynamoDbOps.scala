@@ -4,7 +4,7 @@ import java.util.concurrent.CompletableFuture
 
 import software.amazon.awssdk.utils.builder.{CopyableBuilder, ToCopyableBuilder}
 import cats.effect.IO
-import com.disneystreaming.cxeng.utils.IOFromCompletableFuture
+import com.gubbns.monix.kinesis.IOFromCompletableFuture
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import software.amazon.awssdk.services.dynamodb.model._
 

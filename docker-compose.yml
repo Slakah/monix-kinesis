@@ -2,7 +2,7 @@
 version: '3.7'
 services:
   aws:
-    image: cxeng.docker.artifactory.global.bamgrid.net/localstack/localstack:0.9.0
+    image: localstack/localstack:0.10.4
     environment:
       # See: https://github.com/localstack/localstack#configurations
       - "SERVICES=dynamodb,kinesis,cloudwatch"

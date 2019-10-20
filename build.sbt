@@ -89,7 +89,7 @@ addCommandAlias(
   ).mkString(";", ";", "")
 )
 
-ThisBuild / IntegrationTest / parallelExecution := false
+ThisBuild / IntegrationTest / parallelExecution := true
 lazy val kinesis = (project in file("modules/kinesis"))
   .configs(IntegrationTest)
   .settings(

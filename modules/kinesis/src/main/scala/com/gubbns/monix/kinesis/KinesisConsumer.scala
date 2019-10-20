@@ -17,6 +17,9 @@ import software.amazon.kinesis.retrieval.polling.PollingConfig
 
 object KinesisConsumer {
 
+  private val defaultInitialPosition =
+    InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.TRIM_HORIZON)
+
   def apply(
     streamName: String,
     applicationName: String,
@@ -33,7 +36,8 @@ object KinesisConsumer {
           kinesis,
           dynamoDb,
           cloudWatch,
-          metricsFactory = None
+          metricsFactory = None,
+          defaultInitialPosition
         )
     }
 
@@ -45,22 +49,25 @@ object KinesisConsumer {
     kinesis: KinesisAsyncClient,
     dynamoDb: DynamoDbAsyncClient,
     cloudWatch: CloudWatchAsyncClient,
-    metricsFactory: Option[MetricsFactory]
+    metricsFactory: Option[MetricsFactory],
+    initialPosition: InitialPositionInStreamExtended
   ): Observable[KinesisClientRecord] =
     apply(
-      buildKinesisScheduler(
-        streamName = streamName,
-        applicationName = applicationName,
-        workerIdentifier = workerIdentifier,
-        tableName = tableName,
-        kinesis = kinesis,
-        dynamoDb = dynamoDb,
-        cloudWatch = cloudWatch,
-        metricsFactory
-      )
+      () =>
+        buildKinesisScheduler(
+          streamName = streamName,
+          applicationName = applicationName,
+          workerIdentifier = workerIdentifier,
+          tableName = tableName,
+          kinesis = kinesis,
+          dynamoDb = dynamoDb,
+          cloudWatch = cloudWatch,
+          metricsFactory,
+          initialPosition
+        )
     )
 
-  def apply(f: ShardRecordProcessorFactory => KScheduler): Observable[KinesisClientRecord] =
+  def apply(f: () => ShardRecordProcessorFactory => KScheduler): Observable[KinesisClientRecord] =
     new KinesisConsumerAutoCheckpoint(f)
 
   private val terminateGracePeriod = 10.seconds
@@ -81,7 +88,8 @@ object KinesisConsumer {
           kinesis,
           dynamoDb,
           cloudWatch,
-          metricsFactory = None
+          metricsFactory = None,
+          defaultInitialPosition
         )
     }
 
@@ -93,7 +101,8 @@ object KinesisConsumer {
     kinesis: KinesisAsyncClient,
     dynamoDb: DynamoDbAsyncClient,
     cloudWatch: CloudWatchAsyncClient,
-    metricsFactory: Option[MetricsFactory]
+    metricsFactory: Option[MetricsFactory],
+    initialPosition: InitialPositionInStreamExtended
   ): Observable[CheckpointableRecord] =
     manualCheckpoint(
       buildKinesisScheduler(
@@ -104,7 +113,8 @@ object KinesisConsumer {
         kinesis = kinesis,
         dynamoDb = dynamoDb,
         cloudWatch = cloudWatch,
-        metricsFactory
+        metricsFactory,
+        initialPosition
       )
     )
 
@@ -119,7 +129,8 @@ object KinesisConsumer {
     kinesis: KinesisAsyncClient,
     dynamoDb: DynamoDbAsyncClient,
     cloudWatch: CloudWatchAsyncClient,
-    metricsFactory: Option[MetricsFactory]
+    metricsFactory: Option[MetricsFactory],
+    initialPosition: InitialPositionInStreamExtended
   )(factory: ShardRecordProcessorFactory): KScheduler = {
     val configsBuilder = new ConfigsBuilder(
       streamName,
@@ -144,9 +155,7 @@ object KinesisConsumer {
       configsBuilder
         .retrievalConfig()
         .retrievalSpecificConfig(new PollingConfig(streamName, kinesis))
-        .initialPositionInStreamExtended(
-          InitialPositionInStreamExtended.newInitialPosition(InitialPositionInStream.TRIM_HORIZON)
-        )
+        .initialPositionInStreamExtended(initialPosition)
     )
   }
 

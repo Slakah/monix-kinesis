@@ -6,7 +6,7 @@ import java.util.concurrent.CompletableFuture
 
 import software.amazon.awssdk.utils.builder.{CopyableBuilder, ToCopyableBuilder}
 import cats.effect.IO
-import com.disneystreaming.cxeng.utils.IOFromCompletableFuture
+import com.gubbns.monix.kinesis.IOFromCompletableFuture
 
 final class KinesisOps private (val client: KinesisAsyncClient) extends AnyVal {
 
