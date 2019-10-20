@@ -28,7 +28,9 @@ jobs:
       - run:
           name: validate
           command: |
+            docker network create build_default
             docker run --rm \
+              --network build_default \
               -u root \
               -v $HOME/.ivy2/cache/:/root/.ivy2/cache/ \
               -v $HOME/.sbt:/root/.sbt \
