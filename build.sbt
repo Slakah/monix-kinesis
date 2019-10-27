@@ -1,5 +1,7 @@
 ThisBuild / scalaVersion := "2.13.0"
 
+lazy val isCi = sys.env.contains("CI")
+
 lazy val commonSettings = Seq(
   organization := "com.gubbns",
   homepage := Some(url(s"https://slakah.github.io/${name.value}/")),
@@ -85,6 +87,7 @@ addCommandAlias(
     "lint",
     "test",
     "dockerComposeUp",
+    "waitForDeps",
     "it:test"
   ).mkString(";", ";", "")
 )
@@ -104,7 +107,18 @@ lazy val kinesis = (project in file("modules/kinesis"))
     doctestTestFramework := DoctestTestFramework.MicroTest,
     dockerComposeUp := {
       import sys.process._
-      "docker-compose up -d".!!
+      val res = "docker-compose up -d".!
+      if (res != 0) {
+        throw new IllegalStateException(s"docker-compose up -d returned $res")
+      }
+    },
+    waitForDeps := {
+      import scala.sys.process._
+      val host = if (isCi) "aws" else "localhost"
+      val res = s"./bin/wait-for-deps.sh $host".!
+      if (res != 0) {
+        throw new IllegalStateException(s"wait-for-deps.sh returned $res")
+      }
     },
     libraryDependencies ++= Seq(
       "io.monix" %% "monix" % monixVersion,
@@ -116,8 +130,8 @@ lazy val kinesis = (project in file("modules/kinesis"))
     ).map(_ % "it,test")
   )
 
-val dockerComposeUp =
-  taskKey[Unit]("Runs `docker-compose up -d`")
+val dockerComposeUp = taskKey[Unit]("Runs `docker-compose up -d`")
+val waitForDeps = taskKey[Unit]("Wait for docker deps to be ready, scripts/wait-for-deps.sh")
 
 lazy val scalacOpts = Def.task(
   Seq(
