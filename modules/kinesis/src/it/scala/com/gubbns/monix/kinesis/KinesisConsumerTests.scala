@@ -5,8 +5,8 @@ import java.util.UUID
 
 import utest._
 import cats.implicits._
-import cats.effect.{utest => _, _}
-import cats.effect.utest.IOTestSuite
+import cats.effect._
+import cats.effect.testing.utest.IOTestSuite
 import com.gubbns.monix.kinesis.instances._
 import com.gubbns.monix.kinesis.aws.{AwsClients, DynamoDbOps, KinesisOps}
 import monix.execution.Scheduler.Implicits.global

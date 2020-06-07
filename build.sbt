@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "2.13.0"
+ThisBuild / scalaVersion := "2.13.2"
 
 lazy val isCi = sys.env.contains("CI")
 
@@ -40,16 +40,16 @@ lazy val publishSettings = Seq(
   }
 )
 
-lazy val amazonKinesisClientVersion = "2.2.0"
+lazy val amazonKinesisClientVersion = "2.2.11"
 lazy val betterMonadicForVersion = "0.3.1"
-lazy val catsEffectTestingVersion = "0.2.0"
+lazy val catsEffectTestingVersion = "0.4.0"
 lazy val logbackClassic = "1.2.3"
-lazy val monixVersion = "3.0.0"
-lazy val utestVersion = "0.7.1"
+lazy val monixVersion = "3.2.1"
+lazy val utestVersion = "0.7.4"
 
 ThisBuild / scalafixDependencies ++= Seq(
   "com.eed3si9n.fix" %% "scalafix-noinfer" % "0.1.0-M1",
-  "com.nequissimus" %% "sort-imports" % "0.2.1"
+  "com.github.liancheng" %% "organize-imports" % "0.3.1-RC2"
 )
 
 ThisBuild / libraryDependencies +=
@@ -93,6 +93,7 @@ addCommandAlias(
 )
 
 ThisBuild / IntegrationTest / parallelExecution := true
+
 lazy val kinesis = (project in file("modules/kinesis"))
   .configs(IntegrationTest)
   .settings(
@@ -108,17 +109,15 @@ lazy val kinesis = (project in file("modules/kinesis"))
     dockerComposeUp := {
       import sys.process._
       val res = "docker-compose up -d".!
-      if (res != 0) {
+      if (res != 0)
         throw new IllegalStateException(s"docker-compose up -d returned $res")
-      }
     },
     waitForDeps := {
       import scala.sys.process._
       val host = if (isCi) "aws" else "localhost"
       val res = s"./bin/wait-for-deps.sh $host".!
-      if (res != 0) {
+      if (res != 0)
         throw new IllegalStateException(s"wait-for-deps.sh returned $res")
-      }
     },
     libraryDependencies ++= Seq(
       "io.monix" %% "monix" % monixVersion,

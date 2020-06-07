@@ -18,9 +18,8 @@ private[kinesis] final class KinesisConsumerAutoCheckpoint(
   override def unsafeSubscribeFn(out: Subscriber[KinesisClientRecord]): Cancelable = {
 
     lazy val kSchedulerAndCancel: (KScheduler, Cancelable) = {
-      val cancel = BooleanCancelable(
-        () => blocking { val _ = kSchedulerAndCancel._1.createGracefulShutdownCallable().call() }
-      )
+      val cancel =
+        BooleanCancelable(() => blocking { val _ = kSchedulerAndCancel._1.createGracefulShutdownCallable().call() })
       val kScheduler = f()(() => new RecordProcessorAutoCheckpoint(out, cancel))
       (kScheduler, cancel)
     }

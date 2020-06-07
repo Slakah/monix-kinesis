@@ -2,9 +2,11 @@ package com.gubbns.monix.kinesis
 
 import scala.concurrent.duration._
 
-import cats.effect.{IO, Resource}
+import cats.effect.IO
+import cats.effect.Resource
 import cats.implicits._
-import monix.reactive.{Consumer, Observable}
+import monix.reactive.Consumer
+import monix.reactive.Observable
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient
@@ -52,19 +54,18 @@ object KinesisConsumer {
     metricsFactory: Option[MetricsFactory],
     initialPosition: InitialPositionInStreamExtended
   ): Observable[KinesisClientRecord] =
-    apply(
-      () =>
-        buildKinesisScheduler(
-          streamName = streamName,
-          applicationName = applicationName,
-          workerIdentifier = workerIdentifier,
-          tableName = tableName,
-          kinesis = kinesis,
-          dynamoDb = dynamoDb,
-          cloudWatch = cloudWatch,
-          metricsFactory,
-          initialPosition
-        )
+    apply(() =>
+      buildKinesisScheduler(
+        streamName = streamName,
+        applicationName = applicationName,
+        workerIdentifier = workerIdentifier,
+        tableName = tableName,
+        kinesis = kinesis,
+        dynamoDb = dynamoDb,
+        cloudWatch = cloudWatch,
+        metricsFactory,
+        initialPosition
+      )
     )
 
   def apply(f: () => ShardRecordProcessorFactory => KScheduler): Observable[KinesisClientRecord] =
@@ -178,11 +179,10 @@ object KinesisConsumer {
           .bufferTimedAndCounted(timespan, maxCount)
           .map(_.maxBy(_.extendedSequenceNumber))
           .consumeWith(Consumer.foreachEval { cr =>
-            if (cr.canCheckpoint) {
+            if (cr.canCheckpoint)
               cr.checkpoint[IO]()
-            } else {
+            else
               IO.unit
-            }
           })
       }
 }

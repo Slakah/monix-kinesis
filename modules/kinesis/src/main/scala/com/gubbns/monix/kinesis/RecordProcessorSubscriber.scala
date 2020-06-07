@@ -3,10 +3,13 @@ package com.gubbns.monix.kinesis
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
+import scala.util.Failure
+import scala.util.Success
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success}
 
-import monix.execution.{Ack, Cancelable, Scheduler}
+import monix.execution.Ack
+import monix.execution.Cancelable
+import monix.execution.Scheduler
 import monix.reactive.Observer
 import monix.reactive.observers.Subscriber
 import software.amazon.kinesis.lifecycle.events._

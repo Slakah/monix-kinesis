@@ -1,11 +1,13 @@
 package com.gubbns.monix.kinesis
 
 import scala.jdk.CollectionConverters._
+import scala.util.Failure
+import scala.util.Success
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success}
 
+import monix.execution.Ack
+import monix.execution.Scheduler
 import monix.execution.cancelables.BooleanCancelable
-import monix.execution.{Ack, Scheduler}
 import monix.reactive.Observer
 import monix.reactive.observers.Subscriber
 import software.amazon.kinesis.lifecycle.events._
