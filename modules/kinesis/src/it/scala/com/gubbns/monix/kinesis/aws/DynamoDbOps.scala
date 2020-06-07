@@ -3,20 +3,20 @@ package com.gubbns.monix.kinesis.aws
 import java.util.concurrent.CompletableFuture
 
 import software.amazon.awssdk.utils.builder.{CopyableBuilder, ToCopyableBuilder}
-import cats.effect.IO
+import cats.effect._
 import com.gubbns.monix.kinesis.IOFromCompletableFuture
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import software.amazon.awssdk.services.dynamodb.model._
 
 final class DynamoDbOps private (val client: DynamoDbAsyncClient) extends AnyVal {
 
-  def deleteTable(reqB: DeleteTableRequest.Builder => DeleteTableRequest.Builder): IO[DeleteTableResponse] =
+  def deleteTable(reqB: DeleteTableRequest.Builder => DeleteTableRequest.Builder)(implicit cs: ContextShift[IO]): IO[DeleteTableResponse] =
     runReq(client.deleteTable(_: DeleteTableRequest), reqB(DeleteTableRequest.builder()))
 
   private def runReq[Req <: ToCopyableBuilder[Builder, Req], Builder <: CopyableBuilder[Builder, Req], Resp](
     reqF: Req => CompletableFuture[Resp],
     req: Builder
-  ): IO[Resp] = IOFromCompletableFuture(reqF(req.build()))
+  )(implicit cs: ContextShift[IO]): IO[Resp] = IOFromCompletableFuture(reqF(req.build()))
 }
 
 object DynamoDbOps {
