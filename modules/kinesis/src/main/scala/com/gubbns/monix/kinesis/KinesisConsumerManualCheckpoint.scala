@@ -1,10 +1,10 @@
 package com.gubbns.monix.kinesis
 
-import scala.concurrent.blocking
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 
 import monix.execution.Cancelable
+import monix.execution.cancelables.SingleAssignCancelable
 import monix.reactive.Observable
 import monix.reactive.observers.Subscriber
 import software.amazon.kinesis.coordinator.{Scheduler => KScheduler}
@@ -16,17 +16,18 @@ private[kinesis] final class KinesisConsumerManualCheckpoint(
 ) extends Observable[CheckpointableRecord] {
 
   override def unsafeSubscribeFn(out: Subscriber[CheckpointableRecord]): Cancelable = {
-    lazy val kSchedulerAndCancel: (KScheduler, Cancelable) = {
-      val cancel = Cancelable(() => blocking(kSchedulerAndCancel._1.shutdown()))
-      val kScheduler = f(() => new RecordProcessorSubscriber(out, terminateGracePeriod, cancel))
-      (kScheduler, cancel)
+    val cancel = SingleAssignCancelable()
+    val kScheduler = f(() => new RecordProcessorSubscriber(out, terminateGracePeriod, cancel))
+    val gracefulShutdown = kScheduler.createGracefulShutdownCallable()
+    cancel := Cancelable { () =>
+      val _ = gracefulShutdown.call()
+      ()
     }
-    val (kScheduler, cancel) = kSchedulerAndCancel
 
     out.scheduler.executeAsync { () =>
       try {
-        blocking(kScheduler.run())
-        out.onComplete() // Indicate the worker has exited
+        kScheduler.run()
+        out.onComplete() // indicate the worker has exited
       } catch {
         case NonFatal(ex) =>
           out.onError(ex)

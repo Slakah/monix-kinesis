@@ -42,7 +42,7 @@ private[kinesis] final class RecordProcessorAutoCheckpoint(
       try {
         // TODO: settings for individual checkpointing of records
         val preparedCheckpointer = processRecordsInput.checkpointer().prepareCheckpoint()
-        val ackFuture = Observer.feed(out, records)
+        val ackFuture = Observer.feed(out, cancel, records)
         ackFuture.syncOnComplete {
           case Success(Ack.Continue) =>
             // TODO: handle checkpoint throttling

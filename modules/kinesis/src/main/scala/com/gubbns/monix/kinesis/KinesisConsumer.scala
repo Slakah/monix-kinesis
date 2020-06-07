@@ -54,7 +54,7 @@ object KinesisConsumer {
     metricsFactory: Option[MetricsFactory],
     initialPosition: InitialPositionInStreamExtended
   ): Observable[KinesisClientRecord] =
-    apply(() =>
+    apply(
       buildKinesisScheduler(
         streamName = streamName,
         applicationName = applicationName,
@@ -68,7 +68,7 @@ object KinesisConsumer {
       )
     )
 
-  def apply(f: () => ShardRecordProcessorFactory => KScheduler): Observable[KinesisClientRecord] =
+  def apply(f: ShardRecordProcessorFactory => KScheduler): Observable[KinesisClientRecord] =
     new KinesisConsumerAutoCheckpoint(f)
 
   private val terminateGracePeriod = 10.seconds

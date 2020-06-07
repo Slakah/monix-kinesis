@@ -8,8 +8,8 @@ import scala.util.Success
 import scala.util.control.NonFatal
 
 import monix.execution.Ack
-import monix.execution.Cancelable
 import monix.execution.Scheduler
+import monix.execution.cancelables.BooleanCancelable
 import monix.reactive.Observer
 import monix.reactive.observers.Subscriber
 import software.amazon.kinesis.lifecycle.events._
@@ -19,7 +19,7 @@ import software.amazon.kinesis.retrieval.KinesisClientRecord
 private[kinesis] final class RecordProcessorSubscriber(
   out: Subscriber[CheckpointableRecord],
   terminateGracePeriod: FiniteDuration,
-  cancel: Cancelable
+  cancel: BooleanCancelable
 ) extends ShardRecordProcessor {
 
   private implicit val s: Scheduler = out.scheduler
@@ -39,7 +39,7 @@ private[kinesis] final class RecordProcessorSubscriber(
     }
 
     try {
-      val ackFuture = Observer.feed(out, checkpointableRecords)
+      val ackFuture = Observer.feed(out, cancel, checkpointableRecords)
       ackFuture.syncOnComplete {
         case Success(Ack.Continue) => ()
         case Success(Ack.Stop) => cancel.cancel()
